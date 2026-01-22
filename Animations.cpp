@@ -164,8 +164,8 @@ void Animations::fillNoise(uint8_t hue, uint8_t scale, uint16_t offset) {
 // Rainbow that changes speed and segments based on motion
 void Animations::motionRainbow(const MotionData& motion, unsigned long time) {
   // Rotation changes speed, tilt changes whether it's segmented or continuous
-  float speed = 1.0 + motion.rotationNormalized * 5.0;
-  uint8_t offset = (uint32_t)(time / (50 / speed)) % 256;
+  float speed = 1.5 + motion.rotationNormalized * 8.0;  // Faster and more responsive
+  uint8_t offset = (uint32_t)(time / (30 / speed)) % 256;  // Smoother with higher FPS
 
   if (motion.tiltNormalized > 0.3) {
     rainbowSegmented(offset, speed);
@@ -234,8 +234,8 @@ void Animations::motionPulse(const MotionData& motion, unsigned long time) {
 // Kaleidoscope effect - unique pattern for this project
 void Animations::motionKaleidoscope(const MotionData& motion, unsigned long time) {
   // Each segment mirrors/relates to the others, creating kaleidoscope effect
-  float speed = 1.0 + motion.rotationNormalized * 2.0;
-  uint8_t hueBase = (uint32_t)(time / (30 / speed)) % 256;
+  float speed = 1.5 + motion.rotationNormalized * 4.0;  // More responsive
+  uint8_t hueBase = (uint32_t)(time / (20 / speed)) % 256;  // Faster color cycling
 
   // Add tilt-based hue shift
   hueBase += motion.tiltAngle;

@@ -35,7 +35,6 @@ enum AnimationMode {
 
 AnimationMode currentMode = MODE_KALEIDOSCOPE;
 unsigned long lastModeChange = 0;
-const unsigned long MODE_CHANGE_INTERVAL = 30000; // Change mode every 30 seconds (optional)
 
 // Timing
 unsigned long lastFrame = 0;
@@ -84,12 +83,32 @@ void setup() {
   // Setup mode button (optional)
   pinMode(MODE_BUTTON_PIN, INPUT_PULLUP);
 
+  // Random startup mode if enabled
+  if (RANDOM_START_MODE) {
+    randomSeed(analogRead(0) + millis());  // Seed with analog noise + time
+    currentMode = (AnimationMode)random(MODE_COUNT);
+    Serial.print("Starting with random mode: ");
+    Serial.println(getModeName(currentMode));
+  } else {
+    Serial.println("Starting with: Kaleidoscope");
+  }
+
   Serial.println("=== Kaleidoscope Ready! ===");
-  Serial.println("Current mode: Kaleidoscope");
+  if (AUTO_CYCLE_MODES) {
+    Serial.print("Auto-cycling modes every ");
+    Serial.print(MODE_DURATION_MS / 1000);
+    Serial.println(" seconds");
+  }
+  Serial.print("Animation FPS: ");
+  Serial.println(TARGET_FPS);
+  Serial.print("Motion sensor rate: ");
+  Serial.print(MPU_UPDATE_RATE);
+  Serial.println(" Hz");
   Serial.println();
 
   lastFrame = millis();
   lastMotionUpdate = millis();
+  lastModeChange = millis();
 }
 
 void loop() {
@@ -100,19 +119,19 @@ void loop() {
     motionProcessor.update();
     lastMotionUpdate = currentTime;
 
-    // Print motion data periodically for debugging
-    if (frameCount % 10 == 0) {
+    // Print motion data periodically for debugging (adjusted for higher FPS)
+    if (frameCount % (TARGET_FPS * 2) == 0) {  // Every 2 seconds
       printMotionData();
     }
   }
 
-  // Check for mode button press
+  // Check for mode button press (if connected)
   checkModeButton();
 
-  // Optional: Auto-cycle modes (comment out if you don't want this)
-  // if (currentTime - lastModeChange >= MODE_CHANGE_INTERVAL) {
-  //   nextMode();
-  // }
+  // Auto-cycle modes if enabled
+  if (AUTO_CYCLE_MODES && (currentTime - lastModeChange >= MODE_DURATION_MS)) {
+    nextMode();
+  }
 
   // Frame rate control
   if (currentTime - lastFrame >= FRAME_DELAY) {
