@@ -2,9 +2,9 @@
 #define CONFIG_H
 
 // LED Configuration
-#define LED_PIN 6              // Data pin for WS2812B
-#define NUM_LEDS 300           // Total LEDs on strip
-#define LEDS_PER_SEGMENT 100   // LEDs per segment (300/3)
+#define LED_PIN 4              // Data pin for WS2818
+#define NUM_LEDS 209           // Total LEDs on strip
+#define LEDS_PER_SEGMENT 70    // LEDs per segment (209/3 = ~70, last segment has 69)
 #define NUM_SEGMENTS 3         // Number of segments
 
 // LED Brightness (0-255)

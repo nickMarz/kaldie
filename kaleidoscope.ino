@@ -101,7 +101,7 @@ void loop() {
     lastMotionUpdate = currentTime;
 
     // Print motion data periodically for debugging
-    if (frameCount % 60 == 0) {
+    if (frameCount % 10 == 0) {
       printMotionData();
     }
   }

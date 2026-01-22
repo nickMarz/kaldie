@@ -5,6 +5,7 @@ LEDController::LEDController() {
 }
 
 void LEDController::begin() {
+  // WS2818 uses WS2812B protocol with GRB color order
   FastLED.addLeds<WS2812B, LED_PIN, GRB>(leds, NUM_LEDS);
   FastLED.setBrightness(DEFAULT_BRIGHTNESS);
   clear();
@@ -14,22 +15,23 @@ void LEDController::begin() {
 
 void LEDController::initializeSegments() {
   // Define the three segments based on the back-and-forth layout
-  // Segment 0: LEDs 0-99 (forward)
+  // For 209 LEDs: 70 + 70 + 69
+  // Segment 0: LEDs 0-69 (forward)
   segments[0].start = 0;
-  segments[0].end = LEDS_PER_SEGMENT - 1;
-  segments[0].length = LEDS_PER_SEGMENT;
+  segments[0].end = 69;
+  segments[0].length = 70;
   segments[0].reversed = false;
 
-  // Segment 1: LEDs 100-199 (backward - folded back)
-  segments[1].start = LEDS_PER_SEGMENT;
-  segments[1].end = (LEDS_PER_SEGMENT * 2) - 1;
-  segments[1].length = LEDS_PER_SEGMENT;
+  // Segment 1: LEDs 70-139 (backward - folded back)
+  segments[1].start = 70;
+  segments[1].end = 139;
+  segments[1].length = 70;
   segments[1].reversed = true;
 
-  // Segment 2: LEDs 200-299 (forward again)
-  segments[2].start = LEDS_PER_SEGMENT * 2;
-  segments[2].end = NUM_LEDS - 1;
-  segments[2].length = LEDS_PER_SEGMENT;
+  // Segment 2: LEDs 140-208 (forward again)
+  segments[2].start = 140;
+  segments[2].end = 208;
+  segments[2].length = 69;
   segments[2].reversed = false;
 }
 

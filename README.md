@@ -6,14 +6,16 @@ An interactive art installation featuring a motion-reactive LED kaleidoscope. Th
 
 - **ELEGOO MEGA R3 Board ATmega 2560** - Main microcontroller
 - **MPU-6050 GY-521** - 3-axis accelerometer and gyroscope module
-- **BTF-LIGHTING WS2812B** - 300 LED addressable RGB strip (16.4ft)
+- **WS2818 LED Strip** - 209 addressable RGB LEDs
+  - Uses WS2812B protocol with GRB color order
+  - Data pin: Digital Pin 4
 - Tripod mount with tilt/pan capabilities
 - Large tube with internal mirrors creating infinity mirror effect
 - Magnifying glass for viewing
 
 ## Physical Design
 
-The LED strip is arranged in 3 segments (100 LEDs each) running back and forth within a tube. Three mirrors form a triangle inside the tube, creating an infinity mirror kaleidoscope effect. The tube is mounted on a tripod allowing tilting and rotation, with a magnifying glass at one end for viewing.
+The LED strip is arranged in 3 segments (70 + 70 + 69 LEDs) running back and forth within a tube. Three mirrors form a triangle inside the tube, creating an infinity mirror kaleidoscope effect. The tube is mounted on a tripod allowing tilting and rotation, with a magnifying glass at one end for viewing.
 
 ## Features
 
@@ -55,12 +57,12 @@ SCL        →    SCL (Pin 21)
 SDA        →    SDA (Pin 20)
 ```
 
-#### WS2812B LED Strip
+#### WS2818 LED Strip
 ```
 LED Strip  →    Arduino Mega
-5V         →    5V (or external power supply recommended)
-GND        →    GND
-DIN        →    Pin 6
+5V         →    External 5V Power Supply (REQUIRED)
+GND        →    GND (connect to both Arduino and Power Supply)
+DIN        →    Pin 4
 ```
 
 #### Optional: Mode Switch Button
@@ -70,7 +72,7 @@ One side   →    Pin 2
 Other side →    GND
 ```
 
-**Important:** For 300 LEDs at full brightness, use an external 5V power supply (at least 60W/12A). Connect Arduino GND to power supply GND.
+**Important:** For 209 LEDs, use an external 5V power supply (at least 50W/10A recommended, 63W/12.5A for full white). Always connect Arduino GND to power supply GND - this is critical for data signal to work!
 
 ### 3. Upload Code
 
@@ -219,13 +221,14 @@ case MODE_CUSTOM:
 
 ## Power Considerations
 
-**300 WS2812B LEDs at full white**: ~60W (12A at 5V)
+**209 WS2818 LEDs at full white**: ~63W (12.5A at 5V)
 
 Recommendations:
-- Use external 5V power supply rated for at least 60W
-- Set `MAX_BRIGHTNESS` to 200 or lower to reduce power draw
-- Most animations use colored LEDs (lower power than white)
-- Connect Arduino and LED strip GNDs together
+- Use external 5V power supply rated for at least 50W (10A)
+- `MAX_BRIGHTNESS` is set to 200 to reduce power draw
+- Most animations use colored LEDs (much lower power than white)
+- **CRITICAL**: Connect Arduino GND to both LED strip GND and Power Supply GND
+- See HARDWARE_SETUP.md for detailed wiring and troubleshooting
 
 ## License
 
