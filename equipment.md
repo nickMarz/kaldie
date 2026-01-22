@@ -1,0 +1,3 @@
+ELEGOO MEGA R3 Board ATmega 2560
+MPU-6050 GY-521 MPU6050 3 Axis Accelerometer Module 6 DOF
+BTF-LIGHTING WS2812B IC RGB 5050SMD Pure Gold Individual Addressable LED Strip 16.4FT 300LED
