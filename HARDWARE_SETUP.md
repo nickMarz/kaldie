@@ -25,9 +25,10 @@ The 209 LEDs are divided into 3 segments for the kaleidoscope effect:
 - **Recommended PSU**: 5V 10-15A (50-75W) minimum
 
 ### Realistic Power Usage
-- Most animations use colors, not white (lower power)
-- Brightness limited to 200/255 in code
-- Typical usage: 5-8A (25-40W)
+- Most animations use colors, not white (much lower power than white)
+- Brightness limited to 50/255 max, 20/255 default (very conservative)
+- Typical usage with current settings: 1-3A (5-15W)
+- Maximum possible with current brightness: ~2.5A (12.5W)
 
 ## Critical Wiring Points
 
@@ -194,8 +195,18 @@ Current working configuration:
 #define NUM_LEDS 209          // Total LEDs
 #define LEDS_PER_SEGMENT 70   // LEDs per segment
 #define NUM_SEGMENTS 3        // Number of segments
-#define MAX_BRIGHTNESS 200    // Maximum brightness
-#define DEFAULT_BRIGHTNESS 150 // Default brightness
+#define MAX_BRIGHTNESS 50     // Maximum brightness (reduced for safety)
+#define DEFAULT_BRIGHTNESS 20 // Default brightness
+
+// Performance Settings
+#define TARGET_FPS 120        // Animation frame rate
+#define MPU_UPDATE_RATE 100   // Motion sensor Hz
+#define MOTION_SMOOTHING 0.15 // Response smoothing
+
+// Mode Settings
+#define AUTO_CYCLE_MODES true  // Auto-cycle animations
+#define MODE_DURATION_MS 20000 // 20 seconds per mode
+#define RANDOM_START_MODE true // Random mode on startup
 
 // LEDController.cpp
 FastLED.addLeds<WS2812B, LED_PIN, GRB>(leds, NUM_LEDS);

@@ -94,8 +94,9 @@ On first startup:
 
 ### Operation
 
-- **Default Mode**: Kaleidoscope (most visually interesting)
-- **Mode Switching**: Press the button on Pin 2 to cycle through animation modes
+- **Startup**: Random animation mode selected on power-up
+- **Auto-Cycling**: Automatically switches modes every 20 seconds (configurable)
+- **Mode Switching**: Press the button on Pin 2 to manually cycle (optional)
 - **Motion Control**: Tilt, rotate, or shake the tube to see animations react
 
 ### Debug Output
@@ -111,34 +112,35 @@ Open Serial Monitor (115200 baud) to see:
 
 In `Config.h`:
 ```cpp
-#define MAX_BRIGHTNESS 200     // 0-255
-#define DEFAULT_BRIGHTNESS 150
+#define MAX_BRIGHTNESS 50      // 0-255 (currently set low for safety)
+#define DEFAULT_BRIGHTNESS 20  // Default operating brightness
 ```
 
 #### Change Animation Speed
 
 In `Config.h`:
 ```cpp
-#define TARGET_FPS 60  // Frames per second (30-60 recommended)
+#define TARGET_FPS 120         // Frames per second (currently at max for smoothness)
+#define MPU_UPDATE_RATE 100    // Motion sensor Hz (doubled for responsiveness)
 ```
 
 #### Modify Motion Sensitivity
 
 In `Config.h`:
 ```cpp
-#define TILT_THRESHOLD 15.0      // Degrees - lower = more sensitive
-#define SHAKE_THRESHOLD 2.0      // G-force
-#define ROTATION_THRESHOLD 50    // Degrees/sec
-#define MOTION_SMOOTHING 0.2     // 0-1, lower = more smoothing
+#define TILT_THRESHOLD 10.0      // Degrees - lower = more sensitive
+#define SHAKE_THRESHOLD 1.5      // G-force - lower = more sensitive
+#define ROTATION_THRESHOLD 30    // Degrees/sec - lower = more sensitive
+#define MOTION_SMOOTHING 0.15    // 0-1, lower = more smoothing
 ```
 
-#### Auto-Cycle Modes
+#### Mode Configuration
 
-Uncomment these lines in `kaleidoscope.ino` to automatically change modes every 30 seconds:
+In `Config.h`:
 ```cpp
-// if (currentTime - lastModeChange >= MODE_CHANGE_INTERVAL) {
-//   nextMode();
-// }
+#define AUTO_CYCLE_MODES true    // Auto-cycle through animations
+#define MODE_DURATION_MS 20000   // Time per mode (20 seconds)
+#define RANDOM_START_MODE true   // Start with random mode on power-up
 ```
 
 ## Code Architecture
@@ -214,19 +216,23 @@ case MODE_CUSTOM:
 
 ## Performance Tips
 
-- Keep `TARGET_FPS` at 60 or lower
+- `TARGET_FPS` is set to 120 for maximum smoothness (can be reduced if needed)
+- Motion sensor runs at 100Hz for responsive control
 - Use `fadeToBlackBy()` instead of `clear()` for smoother fading
 - Avoid `delay()` in animations - use time-based calculations instead
-- Test with lower brightness first to avoid power issues
+- Brightness is conservatively set (50 max) for safety and power efficiency
 
 ## Power Considerations
 
-**209 WS2818 LEDs at full white**: ~63W (12.5A at 5V)
+**209 WS2818 LEDs Power Requirements**:
+- **Theoretical max** (full white, 255 brightness): ~63W (12.5A at 5V)
+- **Current config max** (50/255 brightness): ~12.5W (2.5A at 5V)
+- **Typical usage** (colors at 20/255): ~5-15W (1-3A at 5V)
 
 Recommendations:
-- Use external 5V power supply rated for at least 50W (10A)
-- `MAX_BRIGHTNESS` is set to 200 to reduce power draw
-- Most animations use colored LEDs (much lower power than white)
+- Use external 5V power supply rated for at least 5A (25W) minimum, 10A recommended
+- `MAX_BRIGHTNESS` is conservatively set to 50 for safety
+- `DEFAULT_BRIGHTNESS` is 20 for normal operation
 - **CRITICAL**: Connect Arduino GND to both LED strip GND and Power Supply GND
 - See HARDWARE_SETUP.md for detailed wiring and troubleshooting
 
