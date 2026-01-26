@@ -5,10 +5,13 @@ An interactive art installation featuring a motion-reactive LED kaleidoscope. Th
 ## Hardware Components
 
 - **ELEGOO MEGA R3 Board ATmega 2560** - Main microcontroller
-- **MPU-6050 GY-521** - 3-axis accelerometer and gyroscope module
+- **MPU-6050 GY-521** - 3-axis accelerometer and gyroscope module (tilt/pan detection)
 - **WS2818 LED Strip** - 209 addressable RGB LEDs
   - Uses WS2812B protocol with GRB color order
   - Data pin: Digital Pin 4
+- **2x KY-040 Rotary Encoders** (Optional but recommended)
+  - Encoder 1: Mode selection control
+  - Encoder 2: Virtual rotation/effect intensity
 - Tripod mount with tilt/pan capabilities
 - Large tube with internal mirrors creating infinity mirror effect
 - Magnifying glass for viewing
@@ -65,7 +68,24 @@ GND        →    GND (connect to both Arduino and Power Supply)
 DIN        →    Pin 4
 ```
 
-#### Optional: Mode Switch Button
+#### Optional: KY-040 Rotary Encoders
+```
+Encoder 1  →    Arduino Mega    Function
+CLK        →    Pin 3           Mode selection
+DT         →    Pin 5           Direction
+SW         →    Pin 7           Reset button
+VCC        →    5V              Power
+GND        →    GND             Ground
+
+Encoder 2  →    Arduino Mega    Function
+CLK        →    Pin 18          Virtual rotation
+DT         →    Pin 19          Direction
+SW         →    Pin 17          Effect toggle
+VCC        →    5V              Power
+GND        →    GND             Ground
+```
+
+#### Optional: Mode Switch Button (if not using encoders)
 ```
 Button     →    Arduino Mega
 One side   →    Pin 2
@@ -95,9 +115,14 @@ On first startup:
 ### Operation
 
 - **Startup**: Random animation mode selected on power-up
-- **Auto-Cycling**: Automatically switches modes every 20 seconds (configurable)
-- **Mode Switching**: Press the button on Pin 2 to manually cycle (optional)
-- **Motion Control**: Tilt, rotate, or shake the tube to see animations react
+- **Auto-Cycling**: Automatically switches modes every 20 seconds (when encoders not in use)
+- **Mode Switching**:
+  - Encoder 1: Rotate to change modes, press to reset to Kaleidoscope
+  - Button on Pin 2: Manual cycle (if no encoders)
+- **Motion Control**:
+  - Tilt and pan the tube for animation effects
+  - Encoder 2: Provides virtual rotation control
+- **Manual Override**: Encoders disable auto-cycling for precise control
 
 ### Debug Output
 
@@ -151,6 +176,14 @@ In `Config.h`:
 - **`MotionProcessor`** - Handles MPU6050 sensor reading and motion data processing
 - **`LEDController`** - Manages WS2812B LED strip and segment mapping
 - **`Animations`** - Animation primitives and motion-reactive effects
+- **`EncoderHandler`** - Manages rotary encoder input for manual control
+
+### Documentation Files
+
+- **`COMPLETE_WIRING_DIAGRAM.md`** - Full wiring guide with ASCII diagrams
+- **`ENCODER_SETUP.md`** - Rotary encoder installation and configuration
+- **`HARDWARE_SETUP.md`** - Troubleshooting and power management
+- **`SOUND_REACTIVE_ADDON.md`** - Guide for adding sound reactivity (future enhancement)
 
 ### Motion Processing Pipeline
 

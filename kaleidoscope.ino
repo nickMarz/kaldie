@@ -16,11 +16,13 @@
 #include "MotionProcessor.h"
 #include "LEDController.h"
 #include "Animations.h"
+#include "EncoderHandler.h"
 
 // Global objects
 MotionProcessor motionProcessor;
 LEDController ledController;
 Animations animations(ledController);
+EncoderHandler encoderHandler;
 
 // Animation state
 enum AnimationMode {
@@ -35,6 +37,7 @@ enum AnimationMode {
 
 AnimationMode currentMode = MODE_KALEIDOSCOPE;
 unsigned long lastModeChange = 0;
+int lastEncoderModePosition = 0;  // Track encoder position for mode changes
 
 // Timing
 unsigned long lastFrame = 0;
@@ -83,6 +86,12 @@ void setup() {
   // Setup mode button (optional)
   pinMode(MODE_BUTTON_PIN, INPUT_PULLUP);
 
+  // Initialize encoders
+  if (USE_ENCODERS) {
+    Serial.println("Initializing encoders...");
+    encoderHandler.begin();
+  }
+
   // Random startup mode if enabled
   if (RANDOM_START_MODE) {
     randomSeed(analogRead(0) + millis());  // Seed with analog noise + time
@@ -125,11 +134,44 @@ void loop() {
     }
   }
 
-  // Check for mode button press (if connected)
-  checkModeButton();
+  // Update encoders
+  if (USE_ENCODERS) {
+    encoderHandler.update();
 
-  // Auto-cycle modes if enabled
-  if (AUTO_CYCLE_MODES && (currentTime - lastModeChange >= MODE_DURATION_MS)) {
+    // Check encoder 1 for mode changes
+    int encoderModePos = encoderHandler.getEncoder1Position();
+    if (encoderModePos != lastEncoderModePosition) {
+      int modeDiff = encoderModePos - lastEncoderModePosition;
+      lastEncoderModePosition = encoderModePos;
+
+      // Change mode based on encoder rotation
+      for (int i = 0; i < abs(modeDiff); i++) {
+        if (modeDiff > 0) {
+          nextMode();
+        } else {
+          previousMode();
+        }
+      }
+    }
+
+    // Check encoder 1 button for mode reset
+    if (encoderHandler.getEncoder1Button()) {
+      currentMode = MODE_KALEIDOSCOPE;  // Reset to default mode
+      Serial.println("Mode reset to Kaleidoscope");
+      lastModeChange = currentTime;
+    }
+
+    // Update virtual rotation from encoder 2
+    motionProcessor.setVirtualRotation(encoderHandler.getVirtualRotation());
+  }
+
+  // Check for mode button press (if connected and encoders not in use)
+  if (!USE_ENCODERS) {
+    checkModeButton();
+  }
+
+  // Auto-cycle modes if enabled (disabled when using encoders)
+  if (AUTO_CYCLE_MODES && !USE_ENCODERS && (currentTime - lastModeChange >= MODE_DURATION_MS)) {
     nextMode();
   }
 
@@ -209,6 +251,28 @@ void nextMode() {
 
   // Brief flash to indicate mode change
   ledController.fill(CRGB::White);
+  ledController.setBrightness(100);
+  ledController.show();
+  delay(100);
+  ledController.clear();
+  ledController.show();
+  ledController.setBrightness(DEFAULT_BRIGHTNESS);
+}
+
+void previousMode() {
+  currentMode = (AnimationMode)((currentMode - 1 + MODE_COUNT) % MODE_COUNT);
+  lastModeChange = millis();
+
+  // Clear LEDs on mode change
+  ledController.clear();
+  ledController.show();
+
+  // Print mode name
+  Serial.print("Mode changed to: ");
+  Serial.println(getModeName(currentMode));
+
+  // Brief flash to indicate mode change
+  ledController.fill(CRGB::Blue);  // Different color for going backwards
   ledController.setBrightness(100);
   ledController.show();
   delay(100);
