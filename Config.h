@@ -32,4 +32,21 @@
 // Calibration
 #define CALIBRATION_SAMPLES 100
 
+// Encoder Configuration
+#define USE_ENCODERS true      // Enable rotary encoder support
+#define ENCODER_1_CLK 3        // Encoder 1 clock pin (interrupt)
+#define ENCODER_1_DT 5         // Encoder 1 direction pin
+#define ENCODER_1_SW 7         // Encoder 1 switch pin
+
+#define ENCODER_2_CLK 18       // Encoder 2 clock pin (interrupt)
+#define ENCODER_2_DT 19        // Encoder 2 direction pin
+#define ENCODER_2_SW 17        // Encoder 2 switch pin
+
+#define ENCODER_DEBOUNCE_MS 5  // Debounce time for encoders
+#define ENCODER_ACCELERATION true // Speed up changes with fast rotation
+
+// Virtual Rotation (simulated by encoder 2)
+#define VIRTUAL_ROTATION_MAX 100  // Maximum virtual rotation value
+#define VIRTUAL_ROTATION_STEP 5   // Step size per encoder click
+
 #endif
