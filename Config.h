@@ -47,6 +47,6 @@
 
 // Virtual Rotation (simulated by encoder 2)
 #define VIRTUAL_ROTATION_MAX 100  // Maximum virtual rotation value
-#define VIRTUAL_ROTATION_STEP 5   // Step size per encoder click
+#define VIRTUAL_ROTATION_STEP 10  // Step size per encoder click (10 = reach 100 in half rotation)
 
 #endif
