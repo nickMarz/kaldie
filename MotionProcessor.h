@@ -23,8 +23,16 @@ struct MotionData {
 
   // Normalized values for animation (0-1)
   float tiltNormalized;          // 0 = neutral, 1 = max tilt
-  float rotationNormalized;      // 0 = still, 1 = fast rotation
+  float rotationNormalized;      // 0 = still, 1 = fast rotation (or virtual)
   float shakeNormalized;         // 0 = still, 1 = intense shake
+
+  // Pan (horizontal rotation) support
+  float pan;                      // Pan angle (yaw) in degrees
+  float panNormalized;           // 0-1 normalized pan
+
+  // Virtual rotation from encoder
+  float virtualRotation;         // 0-100 from encoder input
+  bool useVirtualRotation;       // Flag to use virtual instead of physical
 };
 
 class MotionProcessor {
@@ -47,6 +55,15 @@ public:
   float getTiltNormalized() const { return motionData.tiltNormalized; }
   float getRotationNormalized() const { return motionData.rotationNormalized; }
   float getShakeNormalized() const { return motionData.shakeNormalized; }
+
+  // Virtual rotation control
+  void setVirtualRotation(float value) {
+    motionData.virtualRotation = value;
+    motionData.useVirtualRotation = true;
+  }
+  void clearVirtualRotation() {
+    motionData.useVirtualRotation = false;
+  }
 
 private:
   Adafruit_MPU6050 mpu;

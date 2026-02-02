@@ -111,12 +111,29 @@ void MotionProcessor::calculateMotionCharacteristics() {
   float totalAccel = sqrt(motionData.accelX * motionData.accelX +
                          motionData.accelY * motionData.accelY +
                          motionData.accelZ * motionData.accelZ);
-  motionData.shakeIntensity = abs(totalAccel - 9.81) / 9.81;
+
+  // Apply dampening if sensor is at end (amplifies shake)
+  #ifdef SENSOR_AT_END
+    motionData.shakeIntensity = abs(totalAccel - 9.81) / 9.81 * SHAKE_DAMPENING;
+  #else
+    motionData.shakeIntensity = abs(totalAccel - 9.81) / 9.81;
+  #endif
 
   // Normalize values for animation (0-1)
   motionData.tiltNormalized = mapToNormalized(motionData.tiltAngle, TILT_THRESHOLD, 90.0);
-  motionData.rotationNormalized = mapToNormalized(motionData.rotationSpeed, ROTATION_THRESHOLD, 500.0);
+
+  // Use virtual rotation if enabled, otherwise use physical rotation
+  if (motionData.useVirtualRotation) {
+    motionData.rotationNormalized = motionData.virtualRotation / VIRTUAL_ROTATION_MAX;
+  } else {
+    motionData.rotationNormalized = mapToNormalized(motionData.rotationSpeed, ROTATION_THRESHOLD, 500.0);
+  }
+
   motionData.shakeNormalized = mapToNormalized(motionData.shakeIntensity, SHAKE_THRESHOLD / 10.0, SHAKE_THRESHOLD);
+
+  // Calculate pan normalized (using roll as pan for now)
+  motionData.pan = motionData.roll;  // Use roll as pan indicator
+  motionData.panNormalized = mapToNormalized(abs(motionData.pan), 15.0, 90.0);
 }
 
 void MotionProcessor::applySmoothing() {

@@ -163,9 +163,15 @@ void Animations::fillNoise(uint8_t hue, uint8_t scale, uint16_t offset) {
 
 // Rainbow that changes speed and segments based on motion
 void Animations::motionRainbow(const MotionData& motion, unsigned long time) {
-  // Rotation changes speed, tilt changes whether it's segmented or continuous
-  float speed = 1.5 + motion.rotationNormalized * 8.0;  // Faster and more responsive
-  uint8_t offset = (uint32_t)(time / (30 / speed)) % 256;  // Smoother with higher FPS
+  // Use BOTH tilt and pan for more reactivity
+  float tiltEffect = motion.tiltNormalized * 10.0;  // Much more reactive to tilt
+  float panEffect = abs(motion.pan) / 45.0 * 5.0;  // Pan also affects speed (45° = max effect)
+  float speed = 1.0 + tiltEffect + panEffect;  // Combined effect
+
+  uint8_t offset = (uint32_t)(time / (30 / speed)) % 256;
+
+  // Pan direction changes color offset
+  offset += (int)(motion.pan * 2);  // Pan shifts the rainbow
 
   if (motion.tiltNormalized > 0.3) {
     rainbowSegmented(offset, speed);
@@ -176,22 +182,28 @@ void Animations::motionRainbow(const MotionData& motion, unsigned long time) {
 
 // Sparkles that react to shake and rotation
 void Animations::motionSparkle(const MotionData& motion) {
-  // Shake controls density, tilt controls color
-  float density = 0.05 + motion.shakeNormalized * 0.3;
-  uint8_t hue = motion.tiltAngle * 2; // 0-180 degrees maps to 0-255 hue
+  // Much more reactive to tilt and pan
+  float density = 0.1 + motion.tiltNormalized * 0.5 + abs(motion.pan) / 90.0 * 0.3;  // More sparkles with motion
+
+  // Color changes with both tilt AND pan
+  uint8_t hue = motion.tiltAngle * 3 + motion.pan;  // More dramatic color changes
 
   CRGB baseColor = CHSV(hue, 200, 50);
-  CRGB sparkleColor = CHSV(hue, 255, 255);
+  CRGB sparkleColor = CHSV(hue + 30, 255, 255);  // Sparkles offset in hue
 
   sparkle(baseColor, sparkleColor, density);
 }
 
 // Wave that changes based on tilt and rotation
 void Animations::motionWave(const MotionData& motion, unsigned long time) {
-  // Tilt angle controls hue, rotation controls wave speed
-  uint8_t hue = map(motion.pitch + 90, 0, 180, 0, 255); // Map -90 to 90 degrees to hue
-  float speed = 1.0 + motion.rotationNormalized * 3.0;
-  uint8_t waveWidth = 30 - motion.tiltNormalized * 20; // Narrower waves with more tilt
+  // Much more reactive to tilt and pan
+  uint8_t hue = map(motion.pitch + 90, 0, 180, 0, 255) + motion.pan;  // Both pitch and pan affect color
+
+  // Use encoder2 virtual rotation AND motion for speed
+  float speed = 1.0 + motion.tiltNormalized * 5.0 + abs(motion.pan) / 45.0 * 3.0;
+
+  // Wave width changes dramatically with tilt
+  uint8_t waveWidth = 50 - motion.tiltNormalized * 40;  // More dramatic wave changes
 
   float position = (time / (100.0 / speed));
   wave(hue, waveWidth, position);
@@ -199,15 +211,15 @@ void Animations::motionWave(const MotionData& motion, unsigned long time) {
 
 // Fire effect that reacts to shake (intensity) and tilt (color)
 void Animations::motionFire(const MotionData& motion) {
-  // Shake increases sparking, tilt affects cooling
-  uint8_t cooling = 55 + motion.tiltNormalized * 30;
-  uint8_t sparking = 100 + motion.shakeNormalized * 100;
+  // Much more reactive to motion
+  uint8_t cooling = 30 + motion.tiltNormalized * 60;  // More dramatic cooling changes
+  uint8_t sparking = 80 + motion.tiltNormalized * 120 + abs(motion.pan) / 45.0 * 50;  // Tilt and pan increase fire
 
   fire(cooling, sparking);
 
-  // Shift hue based on rotation
-  if (motion.rotationNormalized > 0.1) {
-    uint8_t hueShift = motion.rotationSpeed / 2;
+  // Color shift based on pan angle
+  if (abs(motion.pan) > 5) {  // If panning
+    uint8_t hueShift = abs(motion.pan) / 2;  // Pan shifts fire color
     for (uint16_t i = 0; i < leds.numLeds(); i++) {
       CRGB color = leds.getPixel(i);
       CHSV hsv = rgb2hsv_approximate(color);
@@ -219,14 +231,18 @@ void Animations::motionFire(const MotionData& motion) {
 
 // Pulse that reacts to all motion types
 void Animations::motionPulse(const MotionData& motion, unsigned long time) {
-  // Rotation controls pulse speed, tilt controls color, shake controls brightness
-  float speed = 1.0 + motion.rotationNormalized * 3.0;
-  uint8_t hue = motion.tiltAngle * 2;
-  uint8_t baseBrightness = 100 + motion.shakeNormalized * 155;
+  // Much more reactive to tilt and pan
+  float speed = 1.0 + motion.tiltNormalized * 5.0 + abs(motion.pan) / 30.0 * 3.0;  // Both affect speed
+
+  // Color dramatically affected by motion
+  uint8_t hue = motion.tiltAngle * 3 + motion.pan * 2;  // Very reactive colors
+
+  // Brightness range based on tilt
+  uint8_t baseBrightness = 50 + motion.tiltNormalized * 200;  // Wider brightness range
 
   float phase = (time / 1000.0) * speed;
   uint8_t brightness = (sin(phase * 2 * PI) + 1.0) * 127.5;
-  brightness = map(brightness, 0, 255, baseBrightness / 2, baseBrightness);
+  brightness = map(brightness, 0, 255, baseBrightness / 4, baseBrightness);
 
   leds.fill(CHSV(hue, 255, brightness));
 }
@@ -234,11 +250,12 @@ void Animations::motionPulse(const MotionData& motion, unsigned long time) {
 // Kaleidoscope effect - unique pattern for this project
 void Animations::motionKaleidoscope(const MotionData& motion, unsigned long time) {
   // Each segment mirrors/relates to the others, creating kaleidoscope effect
-  float speed = 1.5 + motion.rotationNormalized * 4.0;  // More responsive
-  uint8_t hueBase = (uint32_t)(time / (20 / speed)) % 256;  // Faster color cycling
+  // MUCH more reactive to tilt and pan
+  float speed = 1.0 + motion.tiltNormalized * 8.0 + abs(motion.pan) / 30.0 * 5.0;  // Very responsive
+  uint8_t hueBase = (uint32_t)(time / (20 / speed)) % 256;
 
-  // Add tilt-based hue shift
-  hueBase += motion.tiltAngle;
+  // Both tilt AND pan affect color dramatically
+  hueBase += motion.tiltAngle * 2 + motion.pan;
 
   for (uint8_t seg = 0; seg < leds.numSegments(); seg++) {
     Segment segment = leds.getSegment(seg);
@@ -252,9 +269,9 @@ void Animations::motionKaleidoscope(const MotionData& motion, unsigned long time
       float wave1 = sin(normalizedPos * 4 * PI + time / 200.0);
       float wave2 = sin(normalizedPos * 2 * PI - time / 300.0);
 
-      // Brightness based on waves and shake
+      // Brightness VERY reactive to tilt and pan
       uint8_t brightness = ((wave1 + wave2) / 2.0 + 1.0) * 127.5;
-      brightness = brightness * (0.5 + motion.shakeNormalized * 0.5);
+      brightness = brightness * (0.3 + motion.tiltNormalized * 0.7 + abs(motion.pan) / 90.0 * 0.5);
 
       // Hue based on position, segment, and motion
       uint8_t hue = hueBase + hueOffset + (normalizedPos * 60);
