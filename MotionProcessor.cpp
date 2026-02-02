@@ -111,7 +111,13 @@ void MotionProcessor::calculateMotionCharacteristics() {
   float totalAccel = sqrt(motionData.accelX * motionData.accelX +
                          motionData.accelY * motionData.accelY +
                          motionData.accelZ * motionData.accelZ);
-  motionData.shakeIntensity = abs(totalAccel - 9.81) / 9.81;
+
+  // Apply dampening if sensor is at end (amplifies shake)
+  #ifdef SENSOR_AT_END
+    motionData.shakeIntensity = abs(totalAccel - 9.81) / 9.81 * SHAKE_DAMPENING;
+  #else
+    motionData.shakeIntensity = abs(totalAccel - 9.81) / 9.81;
+  #endif
 
   // Normalize values for animation (0-1)
   motionData.tiltNormalized = mapToNormalized(motionData.tiltAngle, TILT_THRESHOLD, 90.0);
