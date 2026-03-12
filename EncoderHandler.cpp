@@ -119,11 +119,16 @@ void EncoderHandler::handleEncoder1() {
   // Read direction
   int direction = digitalRead(ENCODER_1_DT) ? 1 : -1;
 
+  Serial.print("[ENC1] dir=");
+  Serial.print(direction);
+  Serial.print(" pos_before=");
+  Serial.print(encoder1Pos);
+
   // Calculate acceleration
   if (ENCODER_ACCELERATION) {
     unsigned long timeDiff = now - encoder1LastChange;
     if (timeDiff < 100) {
-      encoder1Speed = min(encoder1Speed + 1, 10);
+      encoder1Speed = min(encoder1Speed + 1, 3);
     } else {
       encoder1Speed = 1;
     }
@@ -131,6 +136,9 @@ void EncoderHandler::handleEncoder1() {
   } else {
     encoder1Pos += direction;
   }
+
+  Serial.print(" pos_after=");
+  Serial.println(encoder1Pos);
 
   encoder1LastChange = now;
 }
@@ -143,11 +151,16 @@ void EncoderHandler::handleEncoder2() {
   // Read direction
   int direction = digitalRead(ENCODER_2_DT) ? 1 : -1;
 
+  Serial.print("[ENC2] dir=");
+  Serial.print(direction);
+  Serial.print(" pos_before=");
+  Serial.print(encoder2Pos);
+
   // Calculate acceleration
   if (ENCODER_ACCELERATION) {
     unsigned long timeDiff = now - encoder2LastChange;
     if (timeDiff < 100) {
-      encoder2Speed = min(encoder2Speed + 1, 10);
+      encoder2Speed = min(encoder2Speed + 1, 3);
     } else {
       encoder2Speed = 1;
     }
@@ -155,6 +168,11 @@ void EncoderHandler::handleEncoder2() {
   } else {
     encoder2Pos += direction;
   }
+
+  Serial.print(" pos_after=");
+  Serial.print(encoder2Pos);
+  Serial.print(" virtualRot=");
+  Serial.println(getVirtualRotation());
 
   encoder2LastChange = now;
 }

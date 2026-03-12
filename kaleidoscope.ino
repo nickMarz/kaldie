@@ -35,7 +35,7 @@ enum AnimationMode {
   MODE_COUNT  // Number of modes
 };
 
-AnimationMode currentMode = MODE_KALEIDOSCOPE;
+AnimationMode currentMode = MODE_FIRE;
 unsigned long lastModeChange = 0;
 int lastEncoderModePosition = 0;  // Track encoder position for mode changes
 
@@ -47,6 +47,7 @@ unsigned long frameCount = 0;
 // Mode switching button (optional - connect to pin 2)
 const int MODE_BUTTON_PIN = 2;
 bool lastButtonState = HIGH;
+int lastEnc2Pos = 0;  // Track encoder 2 changes for logging
 
 void setup() {
   // Initialize serial communication
@@ -152,6 +153,7 @@ void loop() {
           previousMode();
         }
       }
+      printEffectParams();
     }
 
     // Check encoder 1 button for mode reset
@@ -159,10 +161,18 @@ void loop() {
       currentMode = MODE_KALEIDOSCOPE;  // Reset to default mode
       Serial.println("Mode reset to Kaleidoscope");
       lastModeChange = currentTime;
+      printEffectParams();
     }
 
     // Update virtual rotation from encoder 2
     motionProcessor.setVirtualRotation(encoderHandler.getVirtualRotation());
+
+    // Log effect params when encoder 2 changes
+    int enc2Pos = encoderHandler.getEncoder2Position();
+    if (enc2Pos != lastEnc2Pos) {
+      lastEnc2Pos = enc2Pos;
+      printEffectParams();
+    }
   }
 
   // Check for mode button press (if connected and encoders not in use)
@@ -301,32 +311,127 @@ void printMotionData() {
   Serial.print(motion.tiltAngle);
   Serial.print("° (");
   Serial.print(motion.tiltNormalized * 100);
-  Serial.println("%)");
-
-  Serial.print("Rotation: ");
-  Serial.print(motion.rotationSpeed);
-  Serial.print("°/s (");
-  Serial.print(motion.rotationNormalized * 100);
-  Serial.println("%)");
-
-  Serial.print("Shake: ");
-  Serial.print(motion.shakeIntensity);
-  Serial.print(" (");
-  Serial.print(motion.shakeNormalized * 100);
-  Serial.println("%)");
-
-  Serial.print("Pitch: ");
+  Serial.print("%)  Pitch: ");
   Serial.print(motion.pitch);
   Serial.print("° Roll: ");
   Serial.print(motion.roll);
+  Serial.print("° Pan: ");
+  Serial.print(motion.pan);
   Serial.println("°");
 
-  Serial.print("FPS: ");
+  // Raw per-axis data to identify which axis = which physical movement
+  // Try: 1) tilt tube up/down  2) pan left/right  3) rotate around tube axis
+  Serial.print("Accel: X=");
+  Serial.print(motion.accelX, 1);
+  Serial.print(" Y=");
+  Serial.print(motion.accelY, 1);
+  Serial.print(" Z=");
+  Serial.println(motion.accelZ, 1);
+
+  Serial.print("Gyro(°/s): X=");
+  Serial.print(motion.gyroX * 57.3, 1);  // rad/s to deg/s
+  Serial.print(" Y=");
+  Serial.print(motion.gyroY * 57.3, 1);
+  Serial.print(" Z=");
+  Serial.println(motion.gyroZ * 57.3, 1);
+
+  Serial.print("RotSpeed: ");
+  Serial.print(motion.rotationSpeed, 1);
+  Serial.print("°/s  Shake: ");
+  Serial.print(motion.shakeNormalized * 100, 0);
+  Serial.print("%  FPS: ");
   Serial.println(1000.0 / FRAME_DELAY);
   Serial.println();
 }
 
+void printEffectParams() {
+  MotionData motion = motionProcessor.getMotionData();
+  float enc2 = motion.rotationNormalized;
+  float tilt = motion.tiltNormalized;
+  float pan = abs(motion.pan);
+
+  Serial.println("--- Effect Params ---");
+  Serial.print("Mode: ");
+  Serial.print(getModeName(currentMode));
+  Serial.print(" | Enc2(rotNorm)=");
+  Serial.print(enc2, 2);
+  Serial.print(" tilt=");
+  Serial.print(tilt, 2);
+  Serial.print(" pan=");
+  Serial.println(pan, 1);
+
+  switch (currentMode) {
+    case MODE_RAINBOW: {
+      float speed = 1.0 + enc2 * 5.0 + tilt * 10.0 + pan / 45.0 * 5.0;
+      Serial.print("  speed=");
+      Serial.print(speed, 1);
+      Serial.println(" (enc2 adds 0-5)");
+      break;
+    }
+    case MODE_SPARKLE: {
+      float density = 0.1 + enc2 * 0.4 + tilt * 0.5 + pan / 90.0 * 0.3;
+      Serial.print("  density=");
+      Serial.print(density, 2);
+      Serial.println(" (enc2 adds 0-0.4)");
+      break;
+    }
+    case MODE_WAVE: {
+      float speed = 1.0 + enc2 * 4.0 + tilt * 5.0 + pan / 45.0 * 3.0;
+      uint8_t waveWidth = 50 - enc2 * 30 - tilt * 15;
+      Serial.print("  speed=");
+      Serial.print(speed, 1);
+      Serial.print(" waveWidth=");
+      Serial.print(waveWidth);
+      Serial.println(" (enc2: +speed, -width)");
+      break;
+    }
+    case MODE_FIRE: {
+      uint8_t cooling = 60 - enc2 * 40 + tilt * 30;
+      uint8_t sparking = 40 + enc2 * 160 + tilt * 50 + pan / 45.0 * 30;
+      uint8_t hueShift = enc2 * 160;
+      Serial.print("  cooling=");
+      Serial.print(cooling);
+      Serial.print(" sparking=");
+      Serial.print(sparking);
+      Serial.print(" hue=");
+      Serial.print(hueShift);
+      Serial.println(" (enc2: embers->inferno->blue fire)");
+      break;
+    }
+    case MODE_PULSE: {
+      float speed = 1.0 + enc2 * 3.0 + tilt * 5.0 + pan / 30.0 * 3.0;
+      Serial.print("  speed=");
+      Serial.print(speed, 1);
+      Serial.println(" (enc2 adds 0-3)");
+      break;
+    }
+    case MODE_KALEIDOSCOPE: {
+      float speed = 1.0 + enc2 * 4.0 + tilt * 8.0 + pan / 30.0 * 5.0;
+      float waveFreq1 = 4.0 + enc2 * 8.0;
+      float waveFreq2 = 2.0 + enc2 * 6.0;
+      float hueSpread = 60 + enc2 * 120;
+      Serial.print("  speed=");
+      Serial.print(speed, 1);
+      Serial.print(" waveFreq=");
+      Serial.print(waveFreq1, 1);
+      Serial.print("/");
+      Serial.print(waveFreq2, 1);
+      Serial.print(" hueSpread=");
+      Serial.println(hueSpread, 0);
+      break;
+    }
+    default: break;
+  }
+  Serial.println();
+}
+
 void startupAnimation() {
+  // Test: fill all red
+  Serial.println("Testing both strips - filling RED");
+  ledController.fill(CRGB::Red);
+  ledController.show();
+  delay(2000);
+  
   // Quick rainbow sweep on startup
   for (int i = 0; i < 256; i += 4) {
     for (uint16_t j = 0; j < ledController.numLeds(); j++) {

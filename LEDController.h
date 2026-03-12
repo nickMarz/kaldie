@@ -21,7 +21,7 @@ public:
   void clear();
   void show();
 
-  // Direct LED access
+  // Direct LED access (inside strip)
   void setPixel(uint16_t index, CRGB color);
   void setPixel(uint16_t index, uint8_t r, uint8_t g, uint8_t b);
   CRGB getPixel(uint16_t index) const;
@@ -41,6 +41,8 @@ public:
 
   // Utility functions
   uint16_t numLeds() const { return NUM_LEDS; }
+  uint16_t numLedsInside() const { return NUM_LEDS_INSIDE; }
+  uint16_t numLedsOutside() const { return NUM_LEDS_OUTSIDE; }
   uint8_t numSegments() const { return NUM_SEGMENTS; }
 
   // Color utilities
@@ -48,7 +50,7 @@ public:
   static CRGB heatColor(uint8_t temperature);
 
 private:
-  CRGB leds[NUM_LEDS];
+  CRGB leds[NUM_LEDS];  // All LEDs: 208 inside + 90 outside daisy-chained
   Segment segments[NUM_SEGMENTS];
 
   void initializeSegments();

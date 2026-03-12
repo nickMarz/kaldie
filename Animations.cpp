@@ -87,33 +87,40 @@ void Animations::gradient(CRGB color1, CRGB color2, CRGB color3, float position)
   }
 }
 
-// Fire effect
+// Fire effect - runs same direction across all segments (end-to-end)
 void Animations::fire(uint8_t cooling, uint8_t sparking) {
-  // Cool down every cell a little
-  for (uint16_t i = 0; i < leds.numLeds(); i++) {
-    uint8_t cooldown = random(0, ((cooling * 10) / leds.numLeds()) + 2);
+  // Simulate fire per segment so it flows the same visual direction
+  // Each segment uses its slice of the heat array
+  for (uint8_t seg = 0; seg < leds.numSegments(); seg++) {
+    Segment segment = leds.getSegment(seg);
+    uint16_t offset = segment.start;
+    uint16_t len = segment.length;
 
-    if (cooldown > heat[i]) {
-      heat[i] = 0;
-    } else {
-      heat[i] = heat[i] - cooldown;
+    // Cool down every cell
+    for (uint16_t i = 0; i < len; i++) {
+      uint8_t cooldown = random(0, ((cooling * 10) / len) + 2);
+      if (cooldown > heat[offset + i]) {
+        heat[offset + i] = 0;
+      } else {
+        heat[offset + i] -= cooldown;
+      }
     }
-  }
 
-  // Heat from each cell drifts up and diffuses
-  for (uint16_t k = leds.numLeds() - 1; k >= 2; k--) {
-    heat[k] = (heat[k - 1] + heat[k - 2] + heat[k - 2]) / 3;
-  }
+    // Heat drifts "up" (toward higher segment positions = same physical direction)
+    for (uint16_t k = len - 1; k >= 2; k--) {
+      heat[offset + k] = (heat[offset + k - 1] + heat[offset + k - 2] + heat[offset + k - 2]) / 3;
+    }
 
-  // Randomly ignite new sparks near the bottom
-  if (random(255) < sparking) {
-    uint8_t y = random(7);
-    heat[y] = heat[y] + random(160, 255);
-  }
+    // Sparks ignite near the "bottom" of each segment (position 0 = same end of tube)
+    if (random(255) < sparking) {
+      uint8_t y = random(min((uint16_t)7, len));
+      heat[offset + y] = qadd8(heat[offset + y], random(160, 255));
+    }
 
-  // Convert heat to LED colors
-  for (uint16_t j = 0; j < leds.numLeds(); j++) {
-    leds.setPixel(j, LEDController::heatColor(heat[j]));
+    // Render using segment-aware addressing (handles reversed segment 1)
+    for (uint16_t j = 0; j < len; j++) {
+      leds.setSegmentPixel(seg, j, LEDController::heatColor(heat[offset + j]));
+    }
   }
 }
 
@@ -163,15 +170,15 @@ void Animations::fillNoise(uint8_t hue, uint8_t scale, uint16_t offset) {
 
 // Rainbow that changes speed and segments based on motion
 void Animations::motionRainbow(const MotionData& motion, unsigned long time) {
-  // Use BOTH tilt and pan for more reactivity
-  float tiltEffect = motion.tiltNormalized * 10.0;  // Much more reactive to tilt
-  float panEffect = abs(motion.pan) / 45.0 * 5.0;  // Pan also affects speed (45° = max effect)
-  float speed = 1.0 + tiltEffect + panEffect;  // Combined effect
+  // Encoder 2 boosts speed
+  float tiltEffect = motion.tiltNormalized * 10.0;
+  float panEffect = motion.panNormalized * 5.0;
+  float speed = 1.0 + motion.rotationNormalized * 5.0 + tiltEffect + panEffect;
 
   uint8_t offset = (uint32_t)(time / (30 / speed)) % 256;
 
   // Pan direction changes color offset
-  offset += (int)(motion.pan * 2);  // Pan shifts the rainbow
+  offset += (int)(motion.pan * 50);  // Pan shifts the rainbow
 
   if (motion.tiltNormalized > 0.3) {
     rainbowSegmented(offset, speed);
@@ -183,12 +190,12 @@ void Animations::motionRainbow(const MotionData& motion, unsigned long time) {
 // Sparkles that react to shake and rotation
 void Animations::motionSparkle(const MotionData& motion) {
   // Much more reactive to tilt and pan
-  float density = 0.1 + motion.tiltNormalized * 0.5 + abs(motion.pan) / 90.0 * 0.3;  // More sparkles with motion
+  float density = 0.1 + motion.rotationNormalized * 0.4 + motion.tiltNormalized * 0.5 + motion.panNormalized * 0.3;
 
   // Color changes with both tilt AND pan
-  uint8_t hue = motion.tiltAngle * 3 + motion.pan;  // More dramatic color changes
+  uint8_t hue = motion.tiltAngle * 3 + (int)(motion.pan * 50);
 
-  CRGB baseColor = CHSV(hue, 200, 50);
+  CRGB baseColor = CHSV(hue, 200, 150);
   CRGB sparkleColor = CHSV(hue + 30, 255, 255);  // Sparkles offset in hue
 
   sparkle(baseColor, sparkleColor, density);
@@ -197,33 +204,53 @@ void Animations::motionSparkle(const MotionData& motion) {
 // Wave that changes based on tilt and rotation
 void Animations::motionWave(const MotionData& motion, unsigned long time) {
   // Much more reactive to tilt and pan
-  uint8_t hue = map(motion.pitch + 90, 0, 180, 0, 255) + motion.pan;  // Both pitch and pan affect color
+  uint8_t hue = map(motion.pitch + 90, 0, 180, 0, 255) + (int)(motion.pan * 50);
 
   // Use encoder2 virtual rotation AND motion for speed
-  float speed = 1.0 + motion.tiltNormalized * 5.0 + abs(motion.pan) / 45.0 * 3.0;
+  float speed = 1.0 + motion.rotationNormalized * 4.0 + motion.tiltNormalized * 5.0 + motion.panNormalized * 3.0;
 
-  // Wave width changes dramatically with tilt
-  uint8_t waveWidth = 50 - motion.tiltNormalized * 40;  // More dramatic wave changes
+  // Encoder 2 also tightens wave width
+  uint8_t waveWidth = 50 - motion.rotationNormalized * 30 - motion.tiltNormalized * 15;
 
   float position = (time / (100.0 / speed));
   wave(hue, waveWidth, position);
 }
 
 // Fire effect that reacts to shake (intensity) and tilt (color)
+// Encoder 2: controls fire intensity and color temperature
+//   0.0 = smoldering embers (high cooling, low sparking, deep red)
+//   0.5 = normal fire (orange/yellow)
+//   1.0 = inferno (low cooling, max sparking, white-hot with blue tips)
 void Animations::motionFire(const MotionData& motion) {
-  // Much more reactive to motion
-  uint8_t cooling = 30 + motion.tiltNormalized * 60;  // More dramatic cooling changes
-  uint8_t sparking = 80 + motion.tiltNormalized * 120 + abs(motion.pan) / 45.0 * 50;  // Tilt and pan increase fire
+  float enc2 = motion.rotationNormalized;
+
+  // Encoder 2 controls the fire regime
+  // Low enc2 = more cooling, fewer sparks (dying fire)
+  // High enc2 = less cooling, more sparks (raging inferno)
+  uint8_t cooling = 60 - enc2 * 40 + motion.tiltNormalized * 30;
+  uint8_t sparking = 40 + enc2 * 160 + motion.tiltNormalized * 50 + motion.panNormalized * 30;
 
   fire(cooling, sparking);
 
-  // Color shift based on pan angle
-  if (abs(motion.pan) > 5) {  // If panning
-    uint8_t hueShift = abs(motion.pan) / 2;  // Pan shifts fire color
-    for (uint16_t i = 0; i < leds.numLeds(); i++) {
-      CRGB color = leds.getPixel(i);
+  // Encoder 2 shifts fire color temperature
+  // 0 = deep red/orange (normal fire)
+  // 0.5 = yellow/white hot
+  // 1.0 = blue/purple inferno
+  uint8_t hueShift = enc2 * 160;  // 0=red, ~80=blue, ~160=purple
+
+  // Pan also shifts color
+  hueShift += motion.panNormalized * 40;
+
+  // Apply color shift and brightness boost from encoder
+  for (uint16_t i = 0; i < leds.numLeds(); i++) {
+    CRGB color = leds.getPixel(i);
+    if (color.r > 0 || color.g > 0 || color.b > 0) {
       CHSV hsv = rgb2hsv_approximate(color);
       hsv.h += hueShift;
+      // Boost saturation at low enc2 (rich reds), reduce at high (white-hot)
+      hsv.s = 255 - enc2 * 100;
+      // Boost brightness with encoder
+      hsv.v = qadd8(hsv.v, enc2 * 60);
       leds.setPixel(i, hsv);
     }
   }
@@ -232,13 +259,13 @@ void Animations::motionFire(const MotionData& motion) {
 // Pulse that reacts to all motion types
 void Animations::motionPulse(const MotionData& motion, unsigned long time) {
   // Much more reactive to tilt and pan
-  float speed = 1.0 + motion.tiltNormalized * 5.0 + abs(motion.pan) / 30.0 * 3.0;  // Both affect speed
+  float speed = 1.0 + motion.rotationNormalized * 3.0 + motion.tiltNormalized * 5.0 + motion.panNormalized * 3.0;
 
   // Color dramatically affected by motion
-  uint8_t hue = motion.tiltAngle * 3 + motion.pan * 2;  // Very reactive colors
+  uint8_t hue = motion.tiltAngle * 3 + (int)(motion.pan * 100);
 
   // Brightness range based on tilt
-  uint8_t baseBrightness = 50 + motion.tiltNormalized * 200;  // Wider brightness range
+  uint8_t baseBrightness = 150 + motion.tiltNormalized * 105;  // Visible at rest, brighter with motion
 
   float phase = (time / 1000.0) * speed;
   uint8_t brightness = (sin(phase * 2 * PI) + 1.0) * 127.5;
@@ -249,32 +276,35 @@ void Animations::motionPulse(const MotionData& motion, unsigned long time) {
 
 // Kaleidoscope effect - unique pattern for this project
 void Animations::motionKaleidoscope(const MotionData& motion, unsigned long time) {
-  // Each segment mirrors/relates to the others, creating kaleidoscope effect
-  // MUCH more reactive to tilt and pan
-  float speed = 1.0 + motion.tiltNormalized * 8.0 + abs(motion.pan) / 30.0 * 5.0;  // Very responsive
+  // Encoder 2 controls pattern complexity and speed (0 = slow/simple, 1 = fast/complex)
+  float enc2 = motion.rotationNormalized;
+
+  float speed = 1.0 + enc2 * 4.0 + motion.tiltNormalized * 8.0 + motion.panNormalized * 5.0;
   uint8_t hueBase = (uint32_t)(time / (20 / speed)) % 256;
 
-  // Both tilt AND pan affect color dramatically
-  hueBase += motion.tiltAngle * 2 + motion.pan;
+  hueBase += motion.tiltAngle * 2 + (int)(motion.pan * 50);
+
+  // Encoder 2 adds extra wave layers for more complex patterns
+  float waveFreq1 = 4.0 + enc2 * 8.0;   // 4-12 cycles (more = tighter pattern)
+  float waveFreq2 = 2.0 + enc2 * 6.0;   // 2-8 cycles
+  float hueSpread = 60 + enc2 * 120;     // 60-180 hue range per segment
 
   for (uint8_t seg = 0; seg < leds.numSegments(); seg++) {
     Segment segment = leds.getSegment(seg);
-    uint8_t hueOffset = seg * 85; // 120 degree hue offset for each segment
+    uint8_t hueOffset = seg * 85;
 
     for (uint16_t pos = 0; pos < segment.length; pos++) {
-      // Create symmetrical pattern
       float normalizedPos = (float)pos / segment.length;
 
-      // Wave pattern based on position
-      float wave1 = sin(normalizedPos * 4 * PI + time / 200.0);
-      float wave2 = sin(normalizedPos * 2 * PI - time / 300.0);
+      float wave1 = sin(normalizedPos * waveFreq1 * PI + time / 200.0);
+      float wave2 = sin(normalizedPos * waveFreq2 * PI - time / 300.0);
+      // Third wave layer kicks in as encoder 2 increases
+      float wave3 = sin(normalizedPos * 6 * PI + time / 150.0) * enc2;
 
-      // Brightness VERY reactive to tilt and pan
-      uint8_t brightness = ((wave1 + wave2) / 2.0 + 1.0) * 127.5;
-      brightness = brightness * (0.3 + motion.tiltNormalized * 0.7 + abs(motion.pan) / 90.0 * 0.5);
+      uint8_t brightness = ((wave1 + wave2 + wave3) / (2.0 + enc2) + 1.0) * 127.5;
+      brightness = brightness * (0.7 + motion.tiltNormalized * 0.3 + motion.panNormalized * 0.3);
 
-      // Hue based on position, segment, and motion
-      uint8_t hue = hueBase + hueOffset + (normalizedPos * 60);
+      uint8_t hue = hueBase + hueOffset + (uint8_t)(normalizedPos * hueSpread);
 
       leds.setSegmentPixel(seg, pos, CHSV(hue, 255, brightness));
     }
@@ -290,8 +320,7 @@ void Animations::fadeToBlackBy(uint8_t fadeAmount) {
 }
 
 void Animations::blur(uint8_t blurAmount) {
-  // Manual blur implementation since we don't have direct access to leds array
-  // This creates a simple averaging blur effect
+  // Manual blur implementation
   uint16_t numLeds = leds.numLeds();
   if (numLeds < 2) return;
 

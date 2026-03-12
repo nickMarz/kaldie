@@ -2,9 +2,10 @@
 #define CONFIG_H
 
 // LED Configuration
-#define LED_PIN 4              // Data pin for WS2818
-#define NUM_LEDS 210           // Total LEDs on strip
-#define LEDS_PER_SEGMENT 70    // LEDs per segment (209/3 = ~70, last segment has 69)
+#define LED_PIN 4              // Data pin for WS2818 (both inside & outside daisy-chained)
+#define NUM_LEDS 298           // Total: 208 inside + 90 outside (daisy-chained on pin 4)
+#define NUM_LEDS_INSIDE 208    // Inside: 70 + 69 (dead pixel) + 69
+#define NUM_LEDS_OUTSIDE 90    // Outside: 30 + 30 + 30 (indices 208-297)
 #define NUM_SEGMENTS 3         // Number of segments
 
 // LED Brightness (0-255)
@@ -46,7 +47,7 @@
 #define ENCODER_2_DT 19        // Encoder 2 direction pin
 #define ENCODER_2_SW 17        // Encoder 2 switch pin
 
-#define ENCODER_DEBOUNCE_MS 5  // Debounce time for encoders
+#define ENCODER_DEBOUNCE_MS 15 // Debounce time for encoders (higher = more reliable at speed)
 #define ENCODER_ACCELERATION true // Speed up changes with fast rotation
 
 // Virtual Rotation (simulated by encoder 2)

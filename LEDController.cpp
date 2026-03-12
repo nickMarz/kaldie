@@ -6,31 +6,33 @@ LEDController::LEDController() {
 
 void LEDController::begin() {
   // WS2818 uses WS2812B protocol with GRB color order
+  // Both inside & outside strips daisy-chained on pin 4
   FastLED.addLeds<WS2812B, LED_PIN, GRB>(leds, NUM_LEDS);
   FastLED.setBrightness(DEFAULT_BRIGHTNESS);
   clear();
   show();
-  Serial.println("LED Controller initialized");
+  Serial.println("LED Controller initialized (208 inside + 90 outside daisy-chained)");
 }
 
 void LEDController::initializeSegments() {
-  // Define the three segments based on the back-and-forth layout
-  // For 209 LEDs: 70 + 70 + 69
+  // INSIDE: 70 + 69 (dead pixel) + 69 = 208 total
+  // OUTSIDE: 30 + 30 + 30 = 90 (indices 208-297, daisy-chained after inside)
+  
   // Segment 0: LEDs 0-69 (forward)
   segments[0].start = 0;
   segments[0].end = 69;
   segments[0].length = 70;
   segments[0].reversed = false;
 
-  // Segment 1: LEDs 70-139 (backward - folded back)
+  // Segment 1: LEDs 70-138 (backward - folded back, 69 LEDs with dead pixel)
   segments[1].start = 70;
-  segments[1].end = 139;
-  segments[1].length = 70;
+  segments[1].end = 138;
+  segments[1].length = 69;
   segments[1].reversed = true;
 
-  // Segment 2: LEDs 140-208 (forward again)
-  segments[2].start = 140;
-  segments[2].end = 208;
+  // Segment 2: LEDs 139-207 (forward again)
+  segments[2].start = 139;
+  segments[2].end = 207;
   segments[2].length = 69;
   segments[2].reversed = false;
 }

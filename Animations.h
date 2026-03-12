@@ -47,8 +47,8 @@ public:
 private:
   LEDController& leds;
 
-  // Fire effect heat array
-  byte heat[NUM_LEDS];
+  // Fire effect heat array (use larger size for inside strip)
+  byte heat[NUM_LEDS_INSIDE];
 
   // Helper functions
   CRGB lerpColor(CRGB a, CRGB b, float t);

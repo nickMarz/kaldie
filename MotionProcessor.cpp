@@ -131,9 +131,11 @@ void MotionProcessor::calculateMotionCharacteristics() {
 
   motionData.shakeNormalized = mapToNormalized(motionData.shakeIntensity, SHAKE_THRESHOLD / 10.0, SHAKE_THRESHOLD);
 
-  // Calculate pan normalized (using roll as pan for now)
-  motionData.pan = motionData.roll;  // Use roll as pan indicator
-  motionData.panNormalized = mapToNormalized(abs(motionData.pan), 15.0, 90.0);
+  // Pan from raw accelX - directly measures rotation around tube axis
+  // accelX goes from ~0 (neutral) to ~1.0 (half turn) and back
+  // Much more responsive than roll angle which compresses the range
+  motionData.pan = motionData.accelX;  // Raw accel X for pan
+  motionData.panNormalized = mapToNormalized(abs(motionData.pan), 0.2, 2.0);
 }
 
 void MotionProcessor::applySmoothing() {
